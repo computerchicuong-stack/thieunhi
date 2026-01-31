@@ -17,24 +17,27 @@
         }
         #month-tabs::-webkit-scrollbar { display: none; }
 
-        .month-tab { flex: 0 0 auto; transition: all 0.3s ease; }
+        .month-tab { flex: 0 0 auto; transition: all 0.3s ease; border: 2px solid transparent; }
         .month-tab.active { 
-            background-color: #1e3a8a; color: white; 
+            background-color: #1e3a8a; color: white; border-color: #1e3a8a;
             transform: scale(1.05); box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
         }
 
-        .card-lesson { transition: all 0.3s ease; border-radius: 24px; position: relative; border: 1px solid #e2e8f0; background: white; }
+        .card-lesson { 
+            transition: all 0.3s ease; border-radius: 24px; position: relative; 
+            border: 1px solid #e2e8f0; background: white; display: flex; flex-direction: column;
+        }
         .card-lesson:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         
-        .input-admin { width: 100%; border-bottom: 1px dashed #cbd5e1; margin-bottom: 8px; padding: 2px 0; outline: none; }
         label { font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; display: block; margin-top: 8px; }
+        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     </style>
 </head>
 <body class="pb-32">
 
     <header class="bg-blue-900 text-white pt-10 pb-24 px-6 text-center">
         <h1 class="text-3xl font-black uppercase tracking-tight">⛪ HỆ THỐNG TRIỂN KHAI BÀI HỌC</h1>
-        <p class="text-blue-300 mt-2 italic text-sm">Dữ liệu được đồng bộ trực tuyến từ Google Sheet</p>
+        <p class="text-blue-300 mt-2 italic text-sm">Đồng bộ dữ liệu thời gian thực từ Google Sheet</p>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 -mt-16">
@@ -42,24 +45,20 @@
             <div id="month-tabs">
                 <script>
                     for(let i=1; i<=12; i++) {
-                        document.write(`<button onclick="switchMonth(${i})" id="tab-m${i}" class="month-tab px-6 py-3 rounded-xl font-bold text-sm border-2 border-transparent hover:bg-blue-50">Tháng ${i}</button>`);
+                        document.write(`<button onclick="switchMonth(${i})" id="tab-m${i}" class="month-tab px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-50">Tháng ${i}</button>`);
                     }
                 </script>
             </div>
         </div>
 
-        <div id="admin-tools" class="hidden mb-6 flex justify-end">
-            <button onclick="addNewLesson()" class="bg-green-600 text-white px-6 py-2 rounded-full font-bold shadow-lg hover:bg-green-700">
-                <i class="fas fa-plus mr-2"></i> THÊM BÀI HỌC MỚI
-            </button>
-        </div>
-
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="lesson-container">
-            <div class="col-span-full text-center py-10 text-gray-400">Đang tải dữ liệu bài học...</div>
+            <div class="col-span-full text-center py-10 text-gray-400">
+                <i class="fas fa-circle-notch fa-spin mr-2"></i> Đang kết nối dữ liệu...
+            </div>
         </div>
 
         <div class="mt-12 mb-8 text-center">
-            <a href="https://zalo.me/g/0908943468" target="_blank" class="inline-flex items-center gap-3 bg-blue-500 text-white px-8 py-4 rounded-2xl font-bold shadow-xl hover:bg-blue-600 transition">
+            <a href="https://zalo.me/g/0908943468" target="_blank" class="inline-flex items-center gap-3 bg-blue-500 text-white px-8 py-4 rounded-2xl font-bold shadow-xl hover:bg-blue-600 transition transform active:scale-95">
                 <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" class="w-6 h-6" alt="Zalo">
                 THAM GIA NHÓM ZALO HỘI THÁNH
             </a>
@@ -73,49 +72,74 @@
                 <div class="w-8 h-8 rounded-full bg-green-500 border-2 border-white flex items-center justify-center text-[10px] text-white font-bold">N</div>
                 <div class="w-8 h-8 rounded-full bg-orange-500 border-2 border-white flex items-center justify-center text-[10px] text-white font-bold">C</div>
             </div>
+            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden sm:inline">Hope Church Team</span>
         </div>
-        <button onclick="toggleAdminMode()" id="adminBtn" class="bg-gray-800 text-white px-6 py-2 rounded-full text-xs font-bold hover:bg-black">
-            <i class="fas fa-lock mr-2"></i> CHẾ ĐỘ QUẢN LÝ
+        <button onclick="toggleAdminMode()" id="adminBtn" class="bg-gray-800 text-white px-6 py-2 rounded-full text-xs font-bold hover:bg-black transition">
+            <i class="fas fa-sync-alt mr-2"></i> LÀM MỚI DỮ LIỆU
         </button>
     </div>
 
     <script>
-        // URL CSV từ Google Sheet của bạn
         const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM0s7HrcNM12zTW2ee_n40r1MS3sGxhBqPDK-hIvdrqZNJ1EMOym8YGHmzKTScsWf-9gvjjPlB6L7i/pub?output=csv";
-        const PASS_KEY = "thieunhi2026";
         
         let fullPlan = {};
         let currentM = new Date().getMonth() + 1;
-        let isAdmin = false;
+
+        // HÀM QUAN TRỌNG: Tách cột CSV nhưng bỏ qua dấu phẩy nằm trong ngoặc kép
+        function parseCSVLine(line) {
+            const result = [];
+            let current = "";
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = "";
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            // Loại bỏ dấu ngoặc kép bao quanh và xử lý dấu ngoặc kép kép ("")
+            return result.map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"'));
+        }
 
         async function loadDataFromSheet() {
             try {
-                // Thêm timestamp để tránh cache trình duyệt
                 const response = await fetch(`${CSV_URL}&cachebust=${Date.now()}`);
-                const csvText = await response.text();
-                // Tách dòng và xử lý ký tự xuống dòng rác
-                const rows = csvText.replace(/\r/g, "").split('\n').slice(1);
+                const data = await response.text();
+                const lines = data.split(/\r?\n/).slice(1); // Bỏ dòng tiêu đề
                 
                 for (let i = 1; i <= 12; i++) fullPlan[`m${i}`] = [];
 
-                rows.forEach(row => {
-                    const cols = row.split(',');
+                lines.forEach(line => {
+                    if (!line.trim()) return;
+                    const cols = parseCSVLine(line);
+                    
+                    // Kiểm tra nếu có đủ cột cần thiết
                     if (cols.length >= 2) {
-                        const monthKey = cols[0].trim(); // m1, m2...
-                        if (fullPlan[monthKey]) {
-                            fullPlan[monthKey].push({
-                                week: cols[1], topic: cols[2], bible: cols[3], 
-                                verse: cols[4], purpose: cols[5], summary: cols[6], 
-                                assigned: cols[7], status: cols[8], 
-                                link: cols[9] ? cols[9].trim() : "" // Đảm bảo lấy được link ở cột J
+                        const mKey = cols[0].toLowerCase().trim(); // m1, m2...
+                        if (fullPlan[mKey]) {
+                            fullPlan[mKey].push({
+                                week: cols[1],
+                                topic: cols[2],
+                                bible: cols[3],
+                                verse: cols[4],
+                                purpose: cols[5],
+                                summary: cols[6],
+                                assigned: cols[7],
+                                status: cols[8],
+                                link: cols[9] ? cols[9].trim() : ""
                             });
                         }
                     }
                 });
                 switchMonth(currentM);
             } catch (error) {
-                console.error("Lỗi tải dữ liệu:", error);
-                container.innerHTML = `<div class="col-span-full text-center py-10 text-red-400">Không thể kết nối với dữ liệu.</div>`;
+                console.error("Lỗi kết nối:", error);
+                document.getElementById('lesson-container').innerHTML = `<div class="col-span-full text-center py-20 text-red-500 font-bold">LỖI KẾT NỐI DỮ LIỆU. VUI LÒNG KIỂM TRA LẠI FILE SHEET!</div>`;
             }
         }
 
@@ -124,39 +148,49 @@
             const data = fullPlan[`m${m}`] || [];
             
             if (data.length === 0) {
-                container.innerHTML = `<div class="col-span-full text-center py-20 text-gray-400 italic bg-white rounded-3xl border-2 border-dashed">Chưa có bài học cho tháng ${m}</div>`;
+                container.innerHTML = `<div class="col-span-full text-center py-20 text-gray-400 italic bg-white rounded-3xl border-2 border-dashed">Tháng ${m} hiện chưa có kế hoạch bài học.</div>`;
                 return;
             }
 
-            container.innerHTML = data.map((item, index) => {
-                // Kiểm tra link: không rỗng và có chứa http
-                const hasLink = item.link && item.link.length > 5 && item.link.toLowerCase().includes('http');
+            container.innerHTML = data.map((item) => {
+                // Kiểm tra link hợp lệ
+                const hasLink = item.link && item.link.toLowerCase().startsWith('http');
                 
                 return `
-                <div class="card-lesson p-6 flex flex-col justify-between">
-                    ${isAdmin ? `<button onclick="deleteLesson(${index})" class="absolute -top-2 -right-2 bg-red-500 text-white w-8 h-8 rounded-full z-10 shadow-lg"><i class="fas fa-times"></i></button>` : ''}
-                    <div>
+                <div class="card-lesson p-6">
+                    <div class="flex-1">
                         <div class="flex justify-between items-start mb-4">
                             <span class="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-1 rounded">TUẦN ${item.week}</span>
                             <span class="text-[10px] font-bold ${hasLink ? 'text-green-500' : 'text-orange-400'} uppercase">
                                 ${hasLink ? '● Hoàn thành' : '○ Đang soạn'}
                             </span>
                         </div>
+                        
                         <label>Chủ đề</label>
-                        <h3 class="font-bold text-blue-900 mb-2">${item.topic}</h3>
+                        <h3 class="font-bold text-blue-900 mb-2 text-lg leading-tight">${item.topic}</h3>
+                        
                         <label>Kinh Thánh</label>
                         <p class="text-sm text-gray-700 font-medium">${item.bible}</p>
-                        <div class="bg-yellow-50 p-3 rounded-xl my-3 border border-yellow-100">
+                        
+                        <div class="bg-yellow-50 p-4 rounded-2xl my-3 border border-yellow-100 relative">
+                            <i class="fas fa-quote-left absolute top-2 left-2 text-yellow-200 text-xs"></i>
                             <label class="text-yellow-600">Câu Gốc</label>
-                            <p class="text-sm italic text-gray-800">"${item.verse}"</p>
+                            <p class="text-sm italic text-gray-800 leading-relaxed">"${item.verse}"</p>
                         </div>
+                        
                         <label>Mục đích</label>
-                        <p class="text-sm text-gray-600">${item.purpose}</p>
+                        <p class="text-sm text-gray-600 line-clamp-3 mb-4">${item.purpose}</p>
+
+                        <div class="flex items-center gap-2 mt-4 pt-4 border-t border-gray-50">
+                             <div class="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] text-white font-bold">${item.assigned ? item.assigned.charAt(0).toUpperCase() : 'A'}</div>
+                             <span class="text-xs font-bold text-gray-500 uppercase">${item.assigned || 'Admin'}</span>
+                        </div>
                     </div>
+
                     <div class="mt-6">
                         ${hasLink 
-                            ? `<a href="${item.link}" target="_blank" class="block w-full bg-blue-600 text-white text-center py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-700">XEM BÀI HỌC CHI TIẾT</a>` 
-                            : `<div class="w-full bg-gray-50 text-gray-400 text-center py-3 rounded-xl font-bold text-sm border-2 border-dashed">CHỜ CẬP NHẬT</div>`
+                            ? `<a href="${item.link}" target="_blank" class="block w-full bg-blue-700 text-white text-center py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-800 transition transform active:scale-95">XEM BÀI HỌC CHI TIẾT</a>` 
+                            : `<div class="w-full bg-gray-50 text-gray-400 text-center py-4 rounded-xl font-bold text-sm border-2 border-dashed">CHỜ CẬP NHẬT</div>`
                         }
                     </div>
                 </div>`;
@@ -175,21 +209,17 @@
         }
 
         function toggleAdminMode() {
-            if(!isAdmin) {
-                const userPass = prompt("Nhập mật khẩu quản lý:");
-                if(userPass !== PASS_KEY) return;
-                isAdmin = true;
-                document.getElementById('adminBtn').classList.replace('bg-gray-800', 'bg-red-600');
-                document.getElementById('admin-tools').classList.remove('hidden');
-            } else {
-                isAdmin = false;
-                document.getElementById('adminBtn').classList.replace('bg-red-600', 'bg-gray-800');
-                document.getElementById('admin-tools').classList.add('hidden');
-            }
-            renderLessons(currentM);
+            const btn = document.getElementById('adminBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> ĐANG TẢI...';
+            loadDataFromSheet().then(() => {
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> LÀM MỚI DỮ LIỆU';
+                }, 1000);
+            });
         }
 
-        loadDataFromSheet();
+        // Khởi chạy khi trang tải xong
+        window.onload = loadDataFromSheet;
     </script>
 </body>
 </html>
