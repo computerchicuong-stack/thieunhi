@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Bài Học 5 Tuần - Hội Thánh Hy Vọng</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap');
+        body { font-family: 'Quicksand', sans-serif; background-color: #f8fafc; }
+        .month-tab.active { background-color: #1e3a8a; color: white; border-color: #1e3a8a; transform: scale(1.05); }
+        .card-lesson { transition: all 0.3s ease; border-radius: 24px; position: relative; border: 1px solid #e2e8f0; background: white; }
+        .card-lesson:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .input-admin { width: 100%; border-bottom: 1px dashed #cbd5e1; margin-bottom: 8px; padding: 2px 0; outline: none; transition: all 0.2s; }
+        .input-admin:focus { border-bottom-color: #3b82f6; background-color: #f1f5f9; }
+        label { font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; display: block; margin-top: 8px; }
+    </style>
+</head>
+<body class="pb-32">
+
+    <header class="bg-blue-900 text-white pt-10 pb-24 px-6 text-center">
+        <h1 class="text-3xl font-black uppercase tracking-tight">⛪ HỆ THỐNG TRIỂN KHAI BÀI HỌC</h1>
+        <p class="text-blue-300 mt-2 italic">Dữ liệu được đồng bộ trực tuyến từ Google Sheet</p>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 -mt-16">
+        <div class="bg-white p-2 rounded-2xl shadow-xl mb-8 flex overflow-x-auto no-scrollbar gap-2" id="month-tabs">
+            <script>
+                for(let i=1; i<=12; i++) {
+                    document.write(`
+                        <button onclick="switchMonth(${i})" id="tab-m${i}" class="month-tab whitespace-nowrap px-6 py-3 rounded-xl font-bold text-sm border-2 border-transparent hover:bg-blue-50 transition-all">
+                            Tháng ${i}
+                        </button>
+                    `);
+                }
+            </script>
+        </div>
+
+        <div id="admin-tools" class="hidden mb-6 flex justify-end">
+            <button onclick="addNewLesson()" class="bg-green-600 text-white px-6 py-2 rounded-full font-bold shadow-lg hover:bg-green-700 transition">
+                <i class="fas fa-plus mr-2"></i> THÊM BÀI HỌC MỚI
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="lesson-container">
+            <div class="col-span-full text-center py-10 text-gray-400">Đang tải dữ liệu bài học...</div>
+        </div>
+        
+    </main>
+
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] flex justify-between items-center z-50">
+        <div class="flex gap-4 items-center">
+            <span class="text-xs font-bold text-gray-400 uppercase">Team:</span>
+            <div class="flex -space-x-2">
+                <div class="w-8 h-8 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center text-[10px] text-white font-bold" title="Oanh">O</div>
+                <div class="w-8 h-8 rounded-full bg-green-500 border-2 border-white flex items-center justify-center text-[10px] text-white font-bold" title="Nhân">N</div>
+                <div class="w-8 h-8 rounded-full bg-orange-500 border-2 border-white flex items-center justify-center text-[10px] text-white font-bold" title="Cường">C</div>
+            </div>
+        </div>
+        <button onclick="toggleAdminMode()" id="adminBtn" class="bg-gray-800 text-white px-6 py-2 rounded-full text-xs font-bold hover:bg-black transition">
+            <i class="fas fa-lock mr-2"></i> CHẾ ĐỘ QUẢN LÝ
+        </button>
+    </div>
+
+    <script>
+        // CẤU HÌNH ĐƯỜNG DẪN DỮ LIỆU
+        const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM0s7HrcNM12zTW2ee_n40r1MS3sGxhBqPDK-hIvdrqZNJ1EMOym8YGHmzKTScsWf-9gvjjPlB6L7i/pub?output=csv";
+        const WEB_APP_URL = "DÁN_LINK_WEB_APP_SCRIPT_CỦA_BẠN_VÀO_ĐÂY"; // Link Apps Script để LƯU dữ liệu
+        const PASS_KEY = "thieunhi2026";
+        
+        let fullPlan = {};
+        let currentM = new Date().getMonth() + 1; // Tự động chọn tháng hiện tại
+        let isAdmin = false;
+
+        // 1. Hàm tải dữ liệu từ Google Sheet CSV
+        async function loadDataFromSheet() {
+            try {
+                const response = await fetch(CSV_URL);
+                const data = await response.text();
+                const rows = data.split('\n').slice(1); // Bỏ dòng tiêu đề
+                
+                // Reset dữ liệu
+                for (let i = 1; i <= 12; i++) fullPlan[`m${i}`] = [];
+
+                rows.forEach(row => {
+                    const cols = row.split(',');
+                    if (cols.length >= 10) {
+                        const monthKey = cols[0].trim();
+                        if (fullPlan[monthKey]) {
+                            fullPlan[monthKey].push({
+                                week: cols[1], topic: cols[2], bible: cols[3], verse: cols[4],
+                                purpose: cols[5], summary: cols[6], assigned: cols[7],
+                                status: cols[8], link: cols[9]
+                            });
+                        }
+                    }
+                });
+                switchMonth(currentM);
+            } catch (error) {
+                console.error("Lỗi tải dữ liệu:", error);
+                // Nếu lỗi, sử dụng dữ liệu tạm từ LocalStorage
+                fullPlan = JSON.parse(localStorage.getItem('hopeChurchPlan')) || {};
+                switchMonth(currentM);
+            }
+        }
+
+        // 2. Hàm lưu dữ liệu
+        async function saveToStorage() {
+            localStorage.setItem('hopeChurchPlan', JSON.stringify(fullPlan));
+            if (WEB_APP_URL.includes("DÁN_LINK")) return;
+
+            let flatData = [];
+            for(let m in fullPlan) {
+                fullPlan[m].forEach(item => flatData.push({...item, month: m}));
+            }
+
+            try {
+                await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify(flatData)
+                });
+            } catch (error) { console.error("Lỗi đồng bộ:", error); }
+        }
+
+        function switchMonth(m) {
+            currentM = m;
+            document.querySelectorAll('.month-tab').forEach(t => t.classList.remove('active'));
+            const tab = document.getElementById(`tab-m${m}`);
+            if(tab) tab.classList.add('active');
+            renderLessons(m);
+        }
+
+        function renderLessons(m) {
+            const container = document.getElementById('lesson-container');
+            const data = fullPlan[`m${m}`] || [];
+            
+            if (data.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-10 text-gray-400 italic">Chưa có bài học nào cho tháng ${m}</div>`;
+                return;
+            }
+
+            container.innerHTML = data.map((item, index) => {
+                const hasLink = item.link && item.link.trim() !== "" && item.link.includes('http');
+                const statusText = hasLink ? '● Hoàn thành' : '○ Đang soạn';
+                const statusColor = hasLink ? 'text-green-500' : 'text-orange-500';
+
+                return `
+                <div class="card-lesson p-6 flex flex-col justify-between">
+                    ${isAdmin ? `<button onclick="deleteLesson(${index})" class="absolute -top-2 -right-2 bg-red-500 text-white w-8 h-8 rounded-full z-10"><i class="fas fa-times"></i></button>` : ''}
+                    <div>
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-1 rounded">TUẦN ${item.week}</span>
+                            <span class="text-[10px] font-bold ${statusColor} uppercase">${statusText}</span>
+                        </div>
+                        <label>Chủ đề</label>
+                        ${isAdmin ? `<input onchange="editLesson(${index}, 'topic', this.value)" class="input-admin font-bold text-blue-900" value="${item.topic}">` : `<h3 class="font-bold text-blue-900 mb-2">${item.topic}</h3>`}
+                        
+                        <label>Kinh Thánh</label>
+                        ${isAdmin ? `<input onchange="editLesson(${index}, 'bible', this.value)" class="input-admin text-sm" value="${item.bible}">` : `<p class="text-sm text-gray-700 font-medium">${item.bible}</p>`}
+                        
+                        <div class="bg-yellow-50 p-3 rounded-xl my-3 border border-yellow-100">
+                            <label class="text-yellow-600">Câu Gốc</label>
+                            ${isAdmin ? `<textarea onchange="editLesson(${index}, 'verse', this.value)" class="w-full bg-transparent text-sm italic outline-none">${item.verse}</textarea>` : `<p class="text-sm italic text-gray-800">"${item.verse}"</p>`}
+                        </div>
+                        
+                        <label>Mục đích</label>
+                        ${isAdmin ? `<input onchange="editLesson(${index}, 'purpose', this.value)" class="input-admin text-sm" value="${item.purpose}">` : `<p class="text-sm text-gray-600">${item.purpose}</p>`}
+                        
+                        <div class="flex items-center gap-2 mt-4 pt-4 border-t">
+                            <div class="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-[10px] text-white font-bold">${item.assigned ? item.assigned.charAt(0) : 'A'}</div>
+                            ${isAdmin ? `<input onchange="editLesson(${index}, 'assigned', this.value)" class="text-xs font-bold text-gray-600 outline-none" value="${item.assigned}">` : `<span class="text-xs font-bold text-gray-600">${item.assigned}</span>`}
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        ${isAdmin ? `<label>Link chi tiết</label><input oninput="editLesson(${index}, 'link', this.value)" placeholder="Dán link Google Doc..." class="input-admin text-[10px] text-blue-500 mb-4" value="${item.link || ''}">` : ''}
+                        ${hasLink ? `<a href="${item.link}" target="_blank" class="block w-full bg-blue-600 text-white text-center py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-700 transition">XEM CHI TIẾT</a>` : `<div class="w-full bg-gray-50 text-gray-400 text-center py-3 rounded-xl font-bold text-sm border-2 border-dashed">CHỜ CẬP NHẬT</div>`}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function toggleAdminMode() {
+            if(!isAdmin) {
+                const userPass = prompt("Mật khẩu quản lý:");
+                if(userPass !== PASS_KEY) return;
+                isAdmin = true;
+                document.getElementById('adminBtn').classList.replace('bg-gray-800', 'bg-red-600');
+                document.getElementById('admin-tools').classList.remove('hidden');
+            } else {
+                isAdmin = false;
+                document.getElementById('adminBtn').classList.replace('bg-red-600', 'bg-gray-800');
+                document.getElementById('admin-tools').classList.add('hidden');
+                saveToStorage();
+            }
+            renderLessons(currentM);
+        }
+
+        function editLesson(index, field, value) {
+            fullPlan[`m${currentM}`][index][field] = value;
+            renderLessons(currentM);
+            saveToStorage();
+        }
+
+        function addNewLesson() {
+            fullPlan[`m${currentM}`].push({ week: fullPlan[`m${currentM}`].length + 1, topic: "Chủ đề mới", bible: "", verse: "", purpose: "", summary: "", assigned: "Admin", status: "todo", link: "" });
+            renderLessons(currentM);
+            saveToStorage();
+        }
+
+        // Bắt đầu tải dữ liệu
+        loadDataFromSheet();
+    </script>
+</body>
+</html>
