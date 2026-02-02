@@ -33,7 +33,6 @@
         label { font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; display: block; margin-top: 8px; }
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
-        /* Ngôi sao sự kiện lấp lánh */
         .star-event { color: #facc15; filter: drop-shadow(0 0 5px rgba(250, 204, 21, 0.6)); animation: star-glow 1.5s infinite ease-in-out; }
         @keyframes star-glow { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.8; } }
     </style>
@@ -88,7 +87,7 @@
         const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM0s7HrcNM12zTW2ee_n40r1MS3sGxhBqPDK-hIvdrqZNJ1EMOym8YGHmzKTScsWf-9gvjjPlB6L7i/pub?output=csv";
         
         let fullPlan = {};
-        let currentM = new Date().getMonth() + 1; // Tự động lấy tháng hệ thống
+        let currentM = new Date().getMonth() + 1;
 
         function parseCSVLine(line) {
             const result = [];
@@ -118,21 +117,14 @@
                     if (!line.trim()) return;
                     const cols = parseCSVLine(line);
                     
-                    // Kiểm tra và khớp cột theo hình ảnh image_f9a480.jpg
                     if (cols.length >= 3) {
-                        const mKey = cols[0].toLowerCase().trim(); // Cột A
+                        const mKey = cols[0].toLowerCase().trim();
                         if (fullPlan[mKey]) {
                             fullPlan[mKey].push({
-                                week: cols[1],      // Cột B
-                                day: cols[2],       // Cột C (Ngày)
-                                event: cols[3],     // Cột D (Sự kiện)
-                                topic: cols[4],     // Cột E
-                                bible: cols[5],     // Cột F
-                                verse: cols[6],     // Cột G
-                                purpose: cols[7],   // Cột H
-                                assigned: cols[9],  // Cột J
-                                status: cols[10],   // Cột K
-                                link: cols[11] || "" // Cột L
+                                week: cols[1], day: cols[2], event: cols[3],
+                                topic: cols[4], bible: cols[5], verse: cols[6],
+                                purpose: cols[7], assigned: cols[9], status: cols[10],
+                                link: cols[11] || ""
                             });
                         }
                     }
@@ -140,7 +132,6 @@
                 switchMonth(currentM);
             } catch (error) {
                 console.error("Lỗi kết nối:", error);
-                document.getElementById('lesson-container').innerHTML = `<div class="col-span-full text-center py-20 text-red-500 font-bold">KHÔNG THỂ TẢI DỮ LIỆU. VUI LÒNG KIỂM TRA LẠI FILE!</div>`;
             }
         }
 
@@ -156,7 +147,15 @@
             container.innerHTML = data.map((item) => {
                 const hasLink = item.link && item.link.toLowerCase().startsWith('http');
                 const isEvent = item.event && item.event.toUpperCase() === 'Y';
-                const isDone = item.status && item.status.toLowerCase() === 'done';
+
+                // Đoạn mã hiển thị trạng thái đã được cập nhật
+                const statusHTML = hasLink 
+                    ? `<span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200 uppercase animate-pulse">
+                        ● Đã có bài học
+                       </span>` 
+                    : `<span class="text-[10px] font-bold text-orange-400 bg-orange-50 px-2 py-1 rounded-full border border-orange-100 uppercase">
+                        ○ Đang soạn thảo
+                       </span>`;
 
                 return `
                 <div class="card-lesson p-6">
@@ -167,9 +166,7 @@
                                 ${item.day ? `<span class="text-[10px] font-bold bg-yellow-100 text-yellow-700 px-2 py-1 rounded uppercase">NGÀY ${item.day}</span>` : ''}
                                 ${isEvent ? `<i class="fas fa-star star-event text-lg ml-1"></i>` : ''}
                             </div>
-                            <span class="text-[10px] font-bold ${isDone || hasLink ? 'text-green-500' : 'text-orange-400'} uppercase">
-                                ${isDone || hasLink ? '● Hoàn thành' : '○ Đang soạn'}
-                            </span>
+                            ${statusHTML}
                         </div>
                         
                         <label>Chủ đề</label>
