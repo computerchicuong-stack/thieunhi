@@ -128,10 +128,11 @@
                                 bible: cols[5], 
                                 verse: cols[6],
                                 purpose: cols[7], 
-                                summary: cols[8], // Lấy cột Summary (vị trí thứ 9 trong Google Sheet)
+                                summary: cols[8], 
                                 assigned: cols[9], 
                                 status: cols[10],
-                                link: cols[11] || ""
+                                link: cols[11] || "",
+                                resource: cols[12] || "" // Cột M - Resource
                             });
                         }
                     }
@@ -153,6 +154,7 @@
 
             container.innerHTML = data.map((item) => {
                 const hasLink = item.link && item.link.toLowerCase().startsWith('http');
+                const hasResource = item.resource && item.resource.toLowerCase().startsWith('http');
                 const isEvent = item.event && item.event.toUpperCase() === 'Y';
 
                 const statusHTML = hasLink 
@@ -199,10 +201,17 @@
                         </div>
                     </div>
 
-                    <div class="mt-6">
+                    <div class="mt-6 flex flex-col gap-3">
                         ${hasLink 
-                            ? `<a href="${item.link}" target="_blank" class="block w-full bg-blue-700 text-white text-center py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-800 transition transform active:scale-95">XEM BÀI HỌC CHI TIẾT</a>` 
-                            : `<div class="w-full bg-gray-50 text-gray-400 text-center py-4 rounded-xl font-bold text-sm border-2 border-dashed">CHỜ CẬP NHẬT</div>`
+                            ? `<a href="${item.link}" target="_blank" class="block w-full bg-blue-700 text-white text-center py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-800 transition transform active:scale-95 uppercase">Xem bài học chi tiết</a>` 
+                            : `<div class="w-full bg-gray-50 text-gray-400 text-center py-4 rounded-xl font-bold text-sm border-2 border-dashed uppercase">Chờ cập nhật</div>`
+                        }
+                        
+                        ${hasResource 
+                            ? `<a href="${item.resource}" target="_blank" class="block w-full bg-emerald-500 text-white text-center py-3 rounded-xl font-bold text-xs shadow-md hover:bg-emerald-600 transition transform active:scale-95 uppercase">
+                                <i class="fas fa-folder-open mr-2"></i>Tài liệu mở rộng
+                               </a>` 
+                            : ''
                         }
                     </div>
                 </div>`;
