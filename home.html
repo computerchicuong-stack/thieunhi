@@ -26,18 +26,23 @@
         .card-lesson { 
             transition: all 0.3s ease; border-radius: 24px; position: relative; 
             border: 1px solid #e2e8f0; background: white; display: flex; flex-direction: column;
+            overflow: hidden;
         }
         .card-lesson:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         
         label { font-size: 10px; font-weight: bold; color: #94a3b8; text-transform: uppercase; display: block; margin-top: 8px; }
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* Ngôi sao sự kiện lấp lánh */
+        .star-event { color: #facc15; filter: drop-shadow(0 0 5px rgba(250, 204, 21, 0.6)); animation: star-glow 1.5s infinite ease-in-out; }
+        @keyframes star-glow { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.8; } }
     </style>
 </head>
 <body class="pb-32">
 
     <header class="bg-blue-900 text-white pt-10 pb-24 px-6 text-center">
-        <h1 class="text-3xl font-black uppercase tracking-tight">⛪ HỆ THỐNG TRIỂN KHAI BÀI HỌC</h1>
-        <p class="text-blue-300 mt-2 italic text-sm">Đồng bộ dữ liệu thời gian thực quản lý</p>
+        <h1 class="text-3xl font-black uppercase tracking-tight">⛪ HỆ THỐNG TRIỂN KHAI BÀI HỌC THIẾU NHI NĂM 2026</h1>
+        <p class="text-blue-300 mt-2 italic text-sm">Dữ liệu được đồng bộ trực tuyến từ Google Sheet</p>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 -mt-16">
@@ -53,7 +58,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="lesson-container">
             <div class="col-span-full text-center py-10 text-gray-400">
-                <i class="fas fa-circle-notch fa-spin mr-2"></i> Đang kết nối dữ liệu...
+                <i class="fas fa-circle-notch fa-spin mr-2"></i> Đang tải kế hoạch bài học...
             </div>
         </div>
 
@@ -83,26 +88,21 @@
         const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM0s7HrcNM12zTW2ee_n40r1MS3sGxhBqPDK-hIvdrqZNJ1EMOym8YGHmzKTScsWf-9gvjjPlB6L7i/pub?output=csv";
         
         let fullPlan = {};
-        let currentM = new Date().getMonth() + 1;
+        let currentM = new Date().getMonth() + 1; // Tự động lấy tháng hệ thống
 
-        // HÀM QUAN TRỌNG: Tách cột CSV nhưng bỏ qua dấu phẩy nằm trong ngoặc kép
         function parseCSVLine(line) {
             const result = [];
             let current = "";
             let inQuotes = false;
             for (let i = 0; i < line.length; i++) {
                 const char = line[i];
-                if (char === '"') {
-                    inQuotes = !inQuotes;
-                } else if (char === ',' && !inQuotes) {
+                if (char === '"') inQuotes = !inQuotes;
+                else if (char === ',' && !inQuotes) {
                     result.push(current.trim());
                     current = "";
-                } else {
-                    current += char;
-                }
+                } else current += char;
             }
             result.push(current.trim());
-            // Loại bỏ dấu ngoặc kép bao quanh và xử lý dấu ngoặc kép kép ("")
             return result.map(v => v.replace(/^"|"$/g, '').replace(/""/g, '"'));
         }
 
@@ -110,7 +110,7 @@
             try {
                 const response = await fetch(`${CSV_URL}&cachebust=${Date.now()}`);
                 const data = await response.text();
-                const lines = data.split(/\r?\n/).slice(1); // Bỏ dòng tiêu đề
+                const lines = data.split(/\r?\n/).slice(1);
                 
                 for (let i = 1; i <= 12; i++) fullPlan[`m${i}`] = [];
 
@@ -118,20 +118,21 @@
                     if (!line.trim()) return;
                     const cols = parseCSVLine(line);
                     
-                    // Kiểm tra nếu có đủ cột cần thiết
-                    if (cols.length >= 2) {
-                        const mKey = cols[0].toLowerCase().trim(); // m1, m2...
+                    // Kiểm tra và khớp cột theo hình ảnh image_f9a480.jpg
+                    if (cols.length >= 3) {
+                        const mKey = cols[0].toLowerCase().trim(); // Cột A
                         if (fullPlan[mKey]) {
                             fullPlan[mKey].push({
-                                week: cols[1],
-                                topic: cols[2],
-                                bible: cols[3],
-                                verse: cols[4],
-                                purpose: cols[5],
-                                summary: cols[6],
-                                assigned: cols[7],
-                                status: cols[8],
-                                link: cols[9] ? cols[9].trim() : ""
+                                week: cols[1],      // Cột B
+                                day: cols[2],       // Cột C (Ngày)
+                                event: cols[3],     // Cột D (Sự kiện)
+                                topic: cols[4],     // Cột E
+                                bible: cols[5],     // Cột F
+                                verse: cols[6],     // Cột G
+                                purpose: cols[7],   // Cột H
+                                assigned: cols[9],  // Cột J
+                                status: cols[10],   // Cột K
+                                link: cols[11] || "" // Cột L
                             });
                         }
                     }
@@ -139,7 +140,7 @@
                 switchMonth(currentM);
             } catch (error) {
                 console.error("Lỗi kết nối:", error);
-                document.getElementById('lesson-container').innerHTML = `<div class="col-span-full text-center py-20 text-red-500 font-bold">LỖI KẾT NỐI DỮ LIỆU. VUI LÒNG KIỂM TRA LẠI FILE SHEET!</div>`;
+                document.getElementById('lesson-container').innerHTML = `<div class="col-span-full text-center py-20 text-red-500 font-bold">KHÔNG THỂ TẢI DỮ LIỆU. VUI LÒNG KIỂM TRA LẠI FILE!</div>`;
             }
         }
 
@@ -148,41 +149,46 @@
             const data = fullPlan[`m${m}`] || [];
             
             if (data.length === 0) {
-                container.innerHTML = `<div class="col-span-full text-center py-20 text-gray-400 italic bg-white rounded-3xl border-2 border-dashed">Tháng ${m} hiện chưa có kế hoạch bài học.</div>`;
+                container.innerHTML = `<div class="col-span-full text-center py-20 text-gray-400 italic bg-white rounded-3xl border-2 border-dashed mx-4">Tháng ${m} hiện chưa có kế hoạch bài học.</div>`;
                 return;
             }
 
             container.innerHTML = data.map((item) => {
-                // Kiểm tra link hợp lệ
                 const hasLink = item.link && item.link.toLowerCase().startsWith('http');
-                
+                const isEvent = item.event && item.event.toUpperCase() === 'Y';
+                const isDone = item.status && item.status.toLowerCase() === 'done';
+
                 return `
                 <div class="card-lesson p-6">
                     <div class="flex-1">
-                        <div class="flex justify-between items-start mb-4">
-                            <span class="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-1 rounded">TUẦN ${item.week}</span>
-                            <span class="text-[10px] font-bold ${hasLink ? 'text-green-500' : 'text-orange-400'} uppercase">
-                                ${hasLink ? '● Hoàn thành' : '○ Đang soạn'}
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-1 rounded">TUẦN ${item.week}</span>
+                                ${item.day ? `<span class="text-[10px] font-bold bg-yellow-100 text-yellow-700 px-2 py-1 rounded uppercase">NGÀY ${item.day}</span>` : ''}
+                                ${isEvent ? `<i class="fas fa-star star-event text-lg ml-1"></i>` : ''}
+                            </div>
+                            <span class="text-[10px] font-bold ${isDone || hasLink ? 'text-green-500' : 'text-orange-400'} uppercase">
+                                ${isDone || hasLink ? '● Hoàn thành' : '○ Đang soạn'}
                             </span>
                         </div>
                         
                         <label>Chủ đề</label>
-                        <h3 class="font-bold text-blue-900 mb-2 text-lg leading-tight">${item.topic}</h3>
+                        <h3 class="font-bold text-blue-900 mb-2 text-lg leading-tight">${item.topic || 'Chủ đề trống'}</h3>
                         
                         <label>Kinh Thánh</label>
-                        <p class="text-sm text-gray-700 font-medium">${item.bible}</p>
+                        <p class="text-sm text-gray-700 font-medium">${item.bible || 'Đang cập nhật...'}</p>
                         
                         <div class="bg-yellow-50 p-4 rounded-2xl my-3 border border-yellow-100 relative">
-                            <i class="fas fa-quote-left absolute top-2 left-2 text-yellow-200 text-xs"></i>
+                            <i class="fas fa-quote-left absolute top-2 left-2 text-yellow-200 text-[10px]"></i>
                             <label class="text-yellow-600">Câu Gốc</label>
-                            <p class="text-sm italic text-gray-800 leading-relaxed">"${item.verse}"</p>
+                            <p class="text-sm italic text-gray-800 leading-relaxed">"${item.verse || 'Đang soạn câu gốc...'}"</p>
                         </div>
                         
                         <label>Mục đích</label>
-                        <p class="text-sm text-gray-600 line-clamp-3 mb-4">${item.purpose}</p>
+                        <p class="text-sm text-gray-600 line-clamp-3 mb-4">${item.purpose || 'Đang soạn mục đích...'}</p>
 
                         <div class="flex items-center gap-2 mt-4 pt-4 border-t border-gray-50">
-                             <div class="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] text-white font-bold">${item.assigned ? item.assigned.charAt(0).toUpperCase() : 'A'}</div>
+                             <div class="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] text-white font-bold uppercase">${item.assigned ? item.assigned.charAt(0) : 'A'}</div>
                              <span class="text-xs font-bold text-gray-500 uppercase">${item.assigned || 'Admin'}</span>
                         </div>
                     </div>
@@ -218,10 +224,7 @@
             });
         }
 
-        // Khởi chạy khi trang tải xong
         window.onload = loadDataFromSheet;
     </script>
 </body>
 </html>
-
-
