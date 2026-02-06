@@ -40,8 +40,8 @@
 <body class="pb-32">
 
     <header class="bg-blue-900 text-white pt-10 pb-24 px-6 text-center">
-        <h1 class="text-3xl font-black uppercase tracking-tight">⛪ HỆ THỐNG TRIỂN KHAI BÀI HỌC THIẾU NHI NĂM 2026</h1>
-        <p class="text-blue-300 mt-2 italic text-sm">Dữ liệu được đồng bộ trực tuyến từ Ban Thiếu Nhi</p>
+        <h1 class="text-3xl font-black uppercase tracking-tight">⛪ HỆ THỐNG BÀI HỌC THIẾU NHI 2026</h1>
+        <p class="text-blue-300 mt-2 italic text-sm">Bảo mật bằng mã PIN cho từng bài học</p>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 -mt-16">
@@ -62,9 +62,8 @@
         </div>
 
         <div class="mt-12 mb-8 text-center">
-            <a href="https://zalo.me/g/0908943468" target="_blank" class="inline-flex items-center gap-3 bg-blue-500 text-white px-8 py-4 rounded-2xl font-bold shadow-xl hover:bg-blue-600 transition transform active:scale-95">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" class="w-6 h-6" alt="Zalo">
-                THAM GIA NHÓM ZALO HỘI THÁNH
+            <a href="tel:0908943468" class="inline-flex items-center gap-3 bg-blue-500 text-white px-8 py-4 rounded-2xl font-bold shadow-xl hover:bg-blue-600 transition transform active:scale-95">
+                <i class="fas fa-phone-alt"></i> HỖ TRỢ KỸ THUẬT: 0908.943.468
             </a>
         </div>
     </main>
@@ -130,9 +129,9 @@
                                 purpose: cols[7], 
                                 summary: cols[8], 
                                 assigned: cols[9], 
-                                status: cols[10],
+                                pass: cols[10], // Cột K - Mật khẩu
                                 link: cols[11] || "",
-                                resource: cols[12] || "" // Cột M - Resource
+                                resource: cols[12] || ""
                             });
                         }
                     }
@@ -140,6 +139,21 @@
                 switchMonth(currentM);
             } catch (error) {
                 console.error("Lỗi kết nối:", error);
+            }
+        }
+
+        // Hàm xử lý mở bài học có mật khẩu
+        function openProtectedLink(link, correctPass) {
+            if (!correctPass) {
+                window.open(link, '_blank');
+                return;
+            }
+
+            const userPass = prompt("Bài học này được bảo mật. Vui lòng nhập mật khẩu để xem:");
+            if (userPass === correctPass) {
+                window.open(link, '_blank');
+            } else if (userPass !== null) {
+                alert("Mật khẩu không chính xác. Vui lòng thử lại!");
             }
         }
 
@@ -156,14 +170,17 @@
                 const hasLink = item.link && item.link.toLowerCase().startsWith('http');
                 const hasResource = item.resource && item.resource.toLowerCase().startsWith('http');
                 const isEvent = item.event && item.event.toUpperCase() === 'Y';
+                const isLocked = item.pass && item.pass.trim() !== "";
 
-                const statusHTML = hasLink 
-                    ? `<span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200 uppercase animate-pulse">
-                        ● Đã có bài học
+                const statusHTML = isLocked 
+                    ? `<span class="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full border border-red-200 uppercase">
+                        <i class="fas fa-lock mr-1"></i> Có mật khẩu
                        </span>` 
-                    : `<span class="text-[10px] font-bold text-orange-400 bg-orange-50 px-2 py-1 rounded-full border border-orange-100 uppercase">
-                        ○ Đang soạn thảo
-                       </span>`;
+                    : (hasLink ? `<span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200 uppercase">
+                        ● Công khai
+                       </span>` : `<span class="text-[10px] font-bold text-orange-400 bg-orange-50 px-2 py-1 rounded-full border border-orange-100 uppercase">
+                        ○ Đang soạn
+                       </span>`);
 
                 return `
                 <div class="card-lesson p-6">
@@ -192,9 +209,6 @@
                         <label>Mục đích</label>
                         <p class="text-sm text-gray-600 line-clamp-3 mb-3 font-semibold">${item.purpose || 'Đang soạn mục đích...'}</p>
 
-                        <label>Tóm tắt câu chuyện</label>
-                        <p class="text-sm text-gray-500 italic line-clamp-3 mb-4">${item.summary || 'Đang cập nhật tóm tắt nội dung...'}</p>
-
                         <div class="flex items-center gap-2 mt-4 pt-4 border-t border-gray-50">
                              <div class="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] text-white font-bold uppercase">${item.assigned ? item.assigned.charAt(0) : 'A'}</div>
                              <span class="text-xs font-bold text-gray-500 uppercase">${item.assigned || 'Admin'}</span>
@@ -203,8 +217,10 @@
 
                     <div class="mt-6 flex flex-col gap-3">
                         ${hasLink 
-                            ? `<a href="${item.link}" target="_blank" class="block w-full bg-blue-700 text-white text-center py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-800 transition transform active:scale-95 uppercase">Xem bài học chi tiết</a>` 
-                            : `<div class="w-full bg-gray-50 text-gray-400 text-center py-4 rounded-xl font-bold text-sm border-2 border-dashed uppercase">Chờ cập nhật</div>`
+                            ? `<button onclick="openProtectedLink('${item.link}', '${item.pass}')" class="block w-full ${isLocked ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-700 hover:bg-blue-800'} text-white text-center py-4 rounded-xl font-bold text-sm shadow-lg transition transform active:scale-95 uppercase">
+                                ${isLocked ? '<i class="fas fa-lock mr-2"></i>Nhập mã mở bài' : 'Xem bài học chi tiết'}
+                               </button>` 
+                            : `<div class="w-full bg-gray-50 text-gray-400 text-center py-4 rounded-xl font-bold text-sm border-2 border-dashed uppercase">Chưa cập nhật link</div>`
                         }
                         
                         ${hasResource 
