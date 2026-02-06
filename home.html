@@ -123,9 +123,9 @@
                                 purpose: cols[7], 
                                 summary: cols[8], 
                                 assigned: cols[9], 
-                                pass: cols[10],    // Cột K (Index 10)
-                                link: cols[11],    // Cột L (Index 11)
-                                resource: cols[12] // Cột M (Index 12)
+                                pass: cols[10],    
+                                link: cols[11],    
+                                resource: cols[12] 
                             });
                         }
                     }
@@ -136,13 +136,19 @@
             }
         }
 
+        // Hàm mở link có bảo mật
         function openProtectedLink(link, correctPass) {
+            if (!link || !link.toLowerCase().startsWith('http')) {
+                alert("Đường dẫn bài học chưa được cập nhật.");
+                return;
+            }
+
             if (!correctPass || correctPass.trim() === "") {
                 window.open(link, '_blank');
                 return;
             }
 
-            const userPass = prompt("Vui lòng nhập mật khẩu để xem bài học này:");
+            const userPass = prompt("Bài học này được bảo mật. Vui lòng nhập mật khẩu để xem:");
             if (userPass === correctPass) {
                 window.open(link, '_blank');
             } else if (userPass !== null) {
@@ -162,7 +168,6 @@
             container.innerHTML = data.map((item) => {
                 const hasLink = item.link && item.link.toLowerCase().startsWith('http');
                 const hasResource = item.resource && item.resource.toLowerCase().startsWith('http');
-                const isEvent = item.event && item.event.toUpperCase() === 'Y';
                 const isLocked = item.pass && item.pass.trim() !== "";
 
                 return `
@@ -171,9 +176,9 @@
                         <div class="flex justify-between items-center mb-4">
                             <div class="flex items-center gap-2">
                                 <span class="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-1 rounded">TUẦN ${item.week}</span>
-                                ${isLocked ? `<span class="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full border border-red-200"><i class="fas fa-lock mr-1"></i> KHÓA</span>` : ''}
+                                ${isLocked ? `<button onclick="openProtectedLink('${item.link}', '${item.pass}')" class="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full border border-red-200 uppercase hover:bg-red-100 transition"><i class="fas fa-lock mr-1"></i> CÓ MẬT KHẨU</button>` : ''}
                             </div>
-                            ${hasLink ? '<span class="text-[10px] text-green-500 font-bold">● SẴN SÀNG</span>' : '<span class="text-[10px] text-gray-300 font-bold">○ TRỐNG</span>'}
+                            ${hasLink ? '<span class="text-[10px] text-green-500 font-bold uppercase">● CÔNG KHAI</span>' : '<span class="text-[10px] text-gray-300 font-bold uppercase">○ ĐANG SOẠN</span>'}
                         </div>
                         
                         <label>Chủ đề</label>
@@ -196,15 +201,15 @@
                     <div class="mt-6 flex flex-col gap-3">
                         ${hasLink 
                             ? `<button onclick="openProtectedLink('${item.link}', '${item.pass}')" class="block w-full ${isLocked ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-700 hover:bg-blue-800'} text-white text-center py-4 rounded-xl font-bold text-sm shadow-lg transition active:scale-95 uppercase">
-                                ${isLocked ? '<i class="fas fa-unlock-alt mr-2"></i>Mở bằng mã PIN' : 'Xem bài học'}
+                                ${isLocked ? '<i class="fas fa-unlock-alt mr-2"></i>NHẬP MÃ MỞ BÀI' : 'XEM BÀI HỌC CHI TIẾT'}
                                </button>` 
-                            : `<div class="w-full bg-gray-50 text-gray-300 text-center py-4 rounded-xl font-bold text-sm border-2 border-dashed uppercase">Chờ cập nhật</div>`
+                            : `<div class="w-full bg-gray-50 text-gray-300 text-center py-4 rounded-xl font-bold text-sm border-2 border-dashed uppercase">Chờ cập nhật link</div>`
                         }
                         
                         ${hasResource 
-                            ? `<a href="${item.resource}" target="_blank" class="block w-full bg-emerald-500 text-white text-center py-3 rounded-xl font-bold text-xs shadow-md hover:bg-emerald-600 transition active:scale-95 uppercase">
-                                <i class="fas fa-file-download mr-2"></i>Tài liệu đính kèm
-                               </a>` 
+                            ? `<button onclick="openProtectedLink('${item.resource}', '${item.pass}')" class="block w-full bg-emerald-500 text-white text-center py-3 rounded-xl font-bold text-xs shadow-md hover:bg-emerald-600 transition active:scale-95 uppercase">
+                                <i class="fas fa-folder-open mr-2"></i>TÀI LIỆU MỞ RỘNG
+                               </button>` 
                             : ''
                         }
                     </div>
