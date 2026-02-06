@@ -40,7 +40,7 @@
 <body class="pb-32">
 
     <header class="bg-blue-900 text-white pt-10 pb-24 px-6 text-center">
-        <h1 class="text-3xl font-black uppercase tracking-tight">⛪ HỆ THỐNG BÀI HỌC THIẾU NHI 2026</h1>
+        <h1 class="text-3xl font-black uppercase tracking-tight">⛪ HỆ THỐNG TRIỂN KHAI BÀI HỌC THIẾU NHI NĂM 2026</h1>
         <p class="text-blue-300 mt-2 italic text-sm">Dữ liệu bảo mật - được đồng bộ trực tuyến từ Ban Thiếu Nhi</p>
     </header>
 
@@ -57,7 +57,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="lesson-container">
             <div class="col-span-full text-center py-10 text-gray-400">
-                <i class="fas fa-circle-notch fa-spin mr-2"></i> Đang tải dữ liệu...
+                <i class="fas fa-circle-notch fa-spin mr-2"></i> Đang tải kế hoạch bài học...
             </div>
         </div>
 
@@ -88,7 +88,7 @@
         
         let fullPlan = {};
         let currentM = new Date().getMonth() + 1;
-        let unlockedLessons = new Set();
+        let unlockedLessons = new Set(); // Lưu ID các bài đã nhập đúng pass
 
         function parseCSVLine(line) {
             const result = [];
@@ -118,11 +118,11 @@
                     if (!line.trim()) return;
                     const cols = parseCSVLine(line);
                     
-                    if (cols.length >= 11) {
+                    if (cols.length >= 3) {
                         const mKey = cols[0].toLowerCase().trim();
                         if (fullPlan[mKey]) {
                             fullPlan[mKey].push({
-                                id: `lesson-${mKey}-${index}`,
+                                id: `lesson-${mKey}-${index}`, // ID để theo dõi trạng thái unlock
                                 week: cols[1], 
                                 day: cols[2], 
                                 event: cols[3],
@@ -130,21 +130,22 @@
                                 bible: cols[5], 
                                 verse: cols[6],
                                 purpose: cols[7], 
-                                summary: cols[8], 
+                                summary: cols[8],
                                 assigned: cols[9], 
-                                pass: cols[10], 
-                                link: cols[11], 
-                                resource: cols[12]
+                                pass: cols[10], // Cột Pass
+                                link: cols[11], // Cột Link bài học
+                                resource: cols[12] // Cột Tài liệu mở rộng
                             });
                         }
                     }
                 });
                 switchMonth(currentM);
             } catch (error) {
-                console.error("Lỗi:", error);
+                console.error("Lỗi kết nối:", error);
             }
         }
 
+        // Logic mở khóa bài học
         function unlockLesson(id, correctPass) {
             if (!correctPass || correctPass.trim() === "") return;
             const userPass = prompt("Vui lòng nhập mật khẩu để xem nội dung bài học này:");
@@ -161,7 +162,7 @@
             const data = fullPlan[`m${m}`] || [];
             
             if (data.length === 0) {
-                container.innerHTML = `<div class="col-span-full text-center py-20 text-gray-400 italic bg-white rounded-3xl border-2 border-dashed mx-4">Tháng ${m} hiện chưa có kế hoạch.</div>`;
+                container.innerHTML = `<div class="col-span-full text-center py-20 text-gray-400 italic bg-white rounded-3xl border-2 border-dashed mx-4">Tháng ${m} hiện chưa có kế hoạch bài học.</div>`;
                 return;
             }
 
@@ -172,52 +173,65 @@
                 const isUnlocked = unlockedLessons.has(item.id) || !isLocked;
                 const isEvent = item.event && item.event.toUpperCase() === 'Y';
 
+                // Trạng thái hiển thị Badge
+                const statusHTML = hasLink 
+                    ? `<span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200 uppercase ${isUnlocked ? 'animate-pulse' : ''}">
+                        ${isUnlocked ? '● Đã có bài học' : '🔒 Đang khóa'}
+                       </span>` 
+                    : `<span class="text-[10px] font-bold text-orange-400 bg-orange-50 px-2 py-1 rounded-full border border-orange-100 uppercase">
+                        ○ Đang soạn thảo
+                       </span>`;
+
                 return `
                 <div class="card-lesson p-6">
                     <div class="flex-1">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="flex flex-wrap gap-2">
-                                <span class="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-1 rounded">T${item.week}</span>
-                                <span class="text-[10px] font-black bg-orange-100 text-orange-700 px-2 py-1 rounded"><i class="far fa-calendar-alt mr-1"></i>${item.day || '--/--'}</span>
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-1 rounded">TUẦN ${item.week}</span>
+                                ${item.day ? `<span class="text-[10px] font-bold bg-yellow-100 text-yellow-700 px-2 py-1 rounded uppercase">NGÀY ${item.day}</span>` : ''}
                                 ${isEvent ? `<i class="fas fa-star star-event text-lg ml-1"></i>` : ''}
                             </div>
-                            
-                            ${isLocked ? (isUnlocked ? 
-                                `<span class="text-[9px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200"><i class="fas fa-unlock"></i></span>` : 
-                                `<button onclick="unlockLesson('${item.id}', '${item.pass}')" class="text-[9px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full border border-red-200"><i class="fas fa-lock"></i></button>`) 
-                            : ''}
+                            ${statusHTML}
                         </div>
                         
-                        <label>Chủ đề bài học</label>
-                        <h3 class="font-bold text-blue-900 mb-2 text-lg leading-tight">${item.topic || '---'}</h3>
+                        <label>Chủ đề</label>
+                        <h3 class="font-bold text-blue-900 mb-2 text-lg leading-tight">${item.topic || 'Chủ đề trống'}</h3>
                         
                         <label>Kinh Thánh</label>
-                        <p class="text-sm text-gray-700 font-medium">${item.bible || '---'}</p>
+                        <p class="text-sm text-gray-700 font-medium">${item.bible || 'Đang cập nhật...'}</p>
                         
-                        <div class="bg-yellow-50 p-4 rounded-2xl my-3 border border-yellow-100">
+                        <div class="bg-yellow-50 p-4 rounded-2xl my-3 border border-yellow-100 relative">
+                            <i class="fas fa-quote-left absolute top-2 left-2 text-yellow-200 text-[10px]"></i>
                             <label class="text-yellow-600">Câu Gốc</label>
-                            <p class="text-sm italic text-gray-800 line-clamp-3">"${item.verse || '...'}"</p>
+                            <p class="text-sm italic text-gray-800 leading-relaxed">"${item.verse || 'Đang soạn câu gốc...'}"</p>
                         </div>
                         
-                        <label>Mục đích & Tóm tắt</label>
-                        <p class="text-sm text-gray-600 line-clamp-3 mb-4 italic">${item.purpose || 'Đang cập nhật...'}</p>
+                        <label>Mục đích</label>
+                        <p class="text-sm text-gray-600 line-clamp-3 mb-3 font-semibold">${item.purpose || 'Đang soạn mục đích...'}</p>
+
+                        <label>Tóm tắt câu chuyện</label>
+                        <p class="text-sm text-gray-500 italic line-clamp-3 mb-4">${item.summary || 'Đang cập nhật tóm tắt nội dung...'}</p>
 
                         <div class="flex items-center gap-2 mt-4 pt-4 border-t border-gray-50">
                              <div class="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] text-white font-bold uppercase">${item.assigned ? item.assigned.charAt(0) : 'A'}</div>
-                             <span class="text-xs font-bold text-gray-500 uppercase">GV: ${item.assigned || 'Ban Thiếu Nhi'}</span>
+                             <span class="text-xs font-bold text-gray-500 uppercase">${item.assigned || 'Admin'}</span>
                         </div>
                     </div>
 
                     <div class="mt-6 flex flex-col gap-3">
-                        ${hasLink ? (isUnlocked ? 
-                            `<a href="${item.link}" target="_blank" class="block w-full bg-blue-700 text-white text-center py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-800 transition transform active:scale-95 uppercase">XEM BÀI HỌC</a>` : 
-                            `<button onclick="unlockLesson('${item.id}', '${item.pass}')" class="block w-full bg-gray-200 text-gray-400 text-center py-4 rounded-xl font-bold text-sm uppercase"><i class="fas fa-lock mr-2"></i>NHẬP MÃ ĐỂ XEM</button>`)
-                        : `<div class="w-full bg-gray-50 text-gray-300 text-center py-4 rounded-xl font-bold text-sm border-2 border-dashed uppercase italic text-[11px]">Chưa có link bài học</div>`}
-                        
-                        ${hasResource ? (isUnlocked ? 
-                            `<a href="${item.resource}" target="_blank" class="block w-full bg-emerald-500 text-white text-center py-3 rounded-xl font-bold text-xs shadow-md hover:bg-emerald-600 transition transform active:scale-95 uppercase"><i class="fas fa-folder-open mr-2"></i>TÀI LIỆU MỞ RỘNG</a>` : 
-                            `<button onclick="unlockLesson('${item.id}', '${item.pass}')" class="block w-full bg-gray-100 text-gray-300 text-center py-3 rounded-xl font-bold text-[10px] uppercase border border-gray-100">TÀI LIỆU ĐANG KHÓA</button>`)
-                        : ''}
+                        ${hasLink 
+                            ? (isUnlocked 
+                                ? `<a href="${item.link}" target="_blank" class="block w-full bg-blue-700 text-white text-center py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-800 transition transform active:scale-95">XEM BÀI HỌC CHI TIẾT</a>` 
+                                : `<button onclick="unlockLesson('${item.id}', '${item.pass}')" class="block w-full bg-gray-200 text-gray-500 text-center py-4 rounded-xl font-bold text-sm uppercase"><i class="fas fa-lock mr-2"></i>NHẬP MÃ ĐỂ XEM</button>`)
+                            : `<div class="w-full bg-gray-50 text-gray-400 text-center py-4 rounded-xl font-bold text-sm border-2 border-dashed">CHỜ CẬP NHẬT</div>`
+                        }
+
+                        ${hasResource 
+                            ? (isUnlocked 
+                                ? `<a href="${item.resource}" target="_blank" class="block w-full bg-emerald-500 text-white text-center py-3 rounded-xl font-bold text-xs shadow-md hover:bg-emerald-600 transition transform active:scale-95 uppercase"><i class="fas fa-folder-open mr-2"></i>TÀI LIỆU MỞ RỘNG</a>` 
+                                : `<button onclick="unlockLesson('${item.id}', '${item.pass}')" class="block w-full bg-gray-100 text-gray-400 text-center py-3 rounded-xl font-bold text-[10px] uppercase border border-gray-200">TÀI LIỆU ĐANG KHÓA</button>`)
+                            : ''
+                        }
                     </div>
                 </div>`;
             }).join('');
@@ -238,7 +252,9 @@
             const btn = document.getElementById('adminBtn');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> ĐANG TẢI...';
             loadDataFromSheet().then(() => {
-                setTimeout(() => { btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> LÀM MỚI DỮ LIỆU'; }, 1000);
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> LÀM MỚI DỮ LIỆU';
+                }, 1000);
             });
         }
 
@@ -246,4 +262,3 @@
     </script>
 </body>
 </html>
-
