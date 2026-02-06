@@ -40,8 +40,8 @@
 <body class="pb-32">
 
     <header class="bg-blue-900 text-white pt-10 pb-24 px-6 text-center">
-        <h1 class="text-3xl font-black uppercase tracking-tight">⛪ HỆ THỐNG TRIỂN KHAI BÀI HỌC THIẾU NHI NĂM 2026</h1>
-        <p class="text-blue-300 mt-2 italic text-sm">Dữ liệu được đồng bộ trực tuyến từ Ban Thiếu Nhi</p>
+        <h1 class="text-3xl font-black uppercase tracking-tight">⛪ HỆ THỐNG TRIỂN KHAI BÀI HỌC THIẾU NHI 2026</h1>
+        <p class="text-blue-300 mt-2 italic text-sm">Dữ liệu bảo mật - được đồng bộ trực tuyến từ Ban Thiếu Nhi</p>
     </header>
 
     <main class="max-w-7xl mx-auto px-4 -mt-16">
@@ -57,7 +57,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="lesson-container">
             <div class="col-span-full text-center py-10 text-gray-400">
-                <i class="fas fa-circle-notch fa-spin mr-2"></i> Đang tải kế hoạch bài học...
+                <i class="fas fa-circle-notch fa-spin mr-2"></i> Đang tải dữ liệu...
             </div>
         </div>
 
@@ -88,6 +88,7 @@
         
         let fullPlan = {};
         let currentM = new Date().getMonth() + 1;
+        let unlockedLessons = new Set(); // Lưu danh sách các bài đã mở khóa
 
         function parseCSVLine(line) {
             const result = [];
@@ -113,7 +114,7 @@
                 
                 for (let i = 1; i <= 12; i++) fullPlan[`m${i}`] = [];
 
-                lines.forEach(line => {
+                lines.forEach((line, index) => {
                     if (!line.trim()) return;
                     const cols = parseCSVLine(line);
                     
@@ -121,6 +122,7 @@
                         const mKey = cols[0].toLowerCase().trim();
                         if (fullPlan[mKey]) {
                             fullPlan[mKey].push({
+                                id: `lesson-${mKey}-${index}`, // ID duy nhất để mở khóa
                                 week: cols[1], 
                                 day: cols[2], 
                                 event: cols[3],
@@ -130,9 +132,9 @@
                                 purpose: cols[7], 
                                 summary: cols[8], 
                                 assigned: cols[9], 
-                                pass: cols[10], // Mật khẩu từ cột K
-                                link: cols[11], // Link từ cột L
-                                resource: cols[12] // Link từ cột M
+                                pass: cols[10], 
+                                link: cols[11], 
+                                resource: cols[12]
                             });
                         }
                     }
@@ -143,23 +145,16 @@
             }
         }
 
-        // Hàm mở link có bảo mật
-        function openProtectedLink(link, correctPass) {
-            if (!link || !link.toLowerCase().startsWith('http')) {
-                alert("Đường dẫn chưa được cập nhật.");
-                return;
-            }
+        // HÀM MỚI: Mở khóa thẻ bài học
+        function unlockLesson(id, correctPass) {
+            if (!correctPass || correctPass.trim() === "") return;
 
-            if (!correctPass || correctPass.trim() === "") {
-                window.open(link, '_blank');
-                return;
-            }
-
-            const userPass = prompt("Nội dung này được bảo mật. Vui lòng nhập mật khẩu để xem:");
+            const userPass = prompt("Bài học này đang khóa. Vui lòng nhập mật khẩu để mở xem tất cả tài liệu:");
             if (userPass === correctPass) {
-                window.open(link, '_blank');
+                unlockedLessons.add(id);
+                renderLessons(currentM); // Vẽ lại để cập nhật giao diện
             } else if (userPass !== null) {
-                alert("Mật khẩu không chính xác. Vui lòng thử lại!");
+                alert("Mật khẩu chưa chính xác!");
             }
         }
 
@@ -168,7 +163,7 @@
             const data = fullPlan[`m${m}`] || [];
             
             if (data.length === 0) {
-                container.innerHTML = `<div class="col-span-full text-center py-20 text-gray-400 italic bg-white rounded-3xl border-2 border-dashed mx-4">Tháng ${m} hiện chưa có kế hoạch bài học.</div>`;
+                container.innerHTML = `<div class="col-span-full text-center py-20 text-gray-400 italic bg-white rounded-3xl border-2 border-dashed mx-4">Tháng ${m} hiện chưa có kế hoạch.</div>`;
                 return;
             }
 
@@ -176,11 +171,8 @@
                 const hasLink = item.link && item.link.toLowerCase().startsWith('http');
                 const hasResource = item.resource && item.resource.toLowerCase().startsWith('http');
                 const isLocked = item.pass && item.pass.trim() !== "";
+                const isUnlocked = unlockedLessons.has(item.id) || !isLocked; // Đã mở hoặc không có pass
                 const isEvent = item.event && item.event.toUpperCase() === 'Y';
-
-                const statusHTML = hasLink 
-                    ? `<span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200 uppercase animate-pulse">● Đã có bài học</span>` 
-                    : `<span class="text-[10px] font-bold text-orange-400 bg-orange-50 px-2 py-1 rounded-full border border-orange-100 uppercase">○ Đang soạn thảo</span>`;
 
                 return `
                 <div class="card-lesson p-6">
@@ -188,30 +180,29 @@
                         <div class="flex justify-between items-center mb-4">
                             <div class="flex items-center gap-2">
                                 <span class="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-1 rounded">TUẦN ${item.week}</span>
-                                ${item.day ? `<span class="text-[10px] font-bold bg-yellow-100 text-yellow-700 px-2 py-1 rounded uppercase">NGÀY ${item.day}</span>` : ''}
                                 ${isEvent ? `<i class="fas fa-star star-event text-lg ml-1"></i>` : ''}
-                                ${isLocked ? `<button onclick="openProtectedLink('${item.link}', '${item.pass}')" class="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full border border-red-200 uppercase hover:bg-red-100 transition"><i class="fas fa-lock mr-1"></i> Có mật khẩu</button>` : ''}
+                                
+                                ${isLocked ? (isUnlocked ? 
+                                    `<span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200 uppercase"><i class="fas fa-unlock mr-1"></i> ĐÃ MỞ KHÓA</span>` : 
+                                    `<button onclick="unlockLesson('${item.id}', '${item.pass}')" class="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full border border-red-200 uppercase hover:bg-red-100 transition"><i class="fas fa-lock mr-1"></i> NHẬP MÃ ĐỂ XEM</button>`) 
+                                : ''}
                             </div>
-                            ${statusHTML}
+                            ${hasLink ? `<span class="text-[10px] font-bold text-green-500 uppercase">● Sẵn sàng</span>` : `<span class="text-[10px] font-bold text-gray-300 uppercase">○ Chờ dữ liệu</span>`}
                         </div>
                         
                         <label>Chủ đề</label>
-                        <h3 class="font-bold text-blue-900 mb-2 text-lg leading-tight">${item.topic || 'Chủ đề trống'}</h3>
+                        <h3 class="font-bold text-blue-900 mb-2 text-lg leading-tight">${item.topic || '---'}</h3>
                         
                         <label>Kinh Thánh</label>
-                        <p class="text-sm text-gray-700 font-medium">${item.bible || 'Đang cập nhật...'}</p>
+                        <p class="text-sm text-gray-700 font-medium">${item.bible || '---'}</p>
                         
-                        <div class="bg-yellow-50 p-4 rounded-2xl my-3 border border-yellow-100 relative">
-                            <i class="fas fa-quote-left absolute top-2 left-2 text-yellow-200 text-[10px]"></i>
+                        <div class="bg-yellow-50 p-4 rounded-2xl my-3 border border-yellow-100">
                             <label class="text-yellow-600">Câu Gốc</label>
-                            <p class="text-sm italic text-gray-800 leading-relaxed">"${item.verse || 'Đang soạn câu gốc...'}"</p>
+                            <p class="text-sm italic text-gray-800 line-clamp-3">"${item.verse || '...'}"</p>
                         </div>
                         
-                        <label>Mục đích</label>
-                        <p class="text-sm text-gray-600 line-clamp-3 mb-3 font-semibold">${item.purpose || 'Đang soạn mục đích...'}</p>
-
-                        <label>Tóm tắt câu chuyện</label>
-                        <p class="text-sm text-gray-500 italic line-clamp-3 mb-4">${item.summary || 'Đang cập nhật tóm tắt nội dung...'}</p>
+                        <label>Mục đích & Tóm tắt</label>
+                        <p class="text-sm text-gray-600 line-clamp-3 mb-4 italic">${item.purpose || 'Đang cập nhật...'}</p>
 
                         <div class="flex items-center gap-2 mt-4 pt-4 border-t border-gray-50">
                              <div class="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] text-white font-bold uppercase">${item.assigned ? item.assigned.charAt(0) : 'A'}</div>
@@ -220,19 +211,15 @@
                     </div>
 
                     <div class="mt-6 flex flex-col gap-3">
-                        ${hasLink 
-                            ? `<button onclick="openProtectedLink('${item.link}', '${item.pass}')" class="block w-full ${isLocked ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-700 hover:bg-blue-800'} text-white text-center py-4 rounded-xl font-bold text-sm shadow-lg transition active:scale-95 uppercase">
-                                ${isLocked ? '<i class="fas fa-unlock-alt mr-2"></i>Nhập mã mở bài' : 'Xem bài học chi tiết'}
-                               </button>` 
-                            : `<div class="w-full bg-gray-50 text-gray-400 text-center py-4 rounded-xl font-bold text-sm border-2 border-dashed uppercase">Chờ cập nhật</div>`
-                        }
+                        ${hasLink ? (isUnlocked ? 
+                            `<a href="${item.link}" target="_blank" class="block w-full bg-blue-700 text-white text-center py-4 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-800 transition transform active:scale-95 uppercase">XEM BÀI HỌC CHI TIẾT</a>` : 
+                            `<button onclick="unlockLesson('${item.id}', '${item.pass}')" class="block w-full bg-gray-200 text-gray-500 text-center py-4 rounded-xl font-bold text-sm uppercase"><i class="fas fa-lock mr-2"></i>BÀI HỌC ĐANG KHÓA</button>`)
+                        : `<div class="w-full bg-gray-50 text-gray-400 text-center py-4 rounded-xl font-bold text-sm border-2 border-dashed uppercase">Chờ cập nhật link</div>`}
                         
-                        ${hasResource 
-                            ? `<button onclick="openProtectedLink('${item.resource}', '${item.pass}')" class="block w-full bg-emerald-500 text-white text-center py-3 rounded-xl font-bold text-xs shadow-md hover:bg-emerald-600 transition active:scale-95 uppercase">
-                                <i class="fas fa-folder-open mr-2"></i>Tài liệu mở rộng
-                               </button>` 
-                            : ''
-                        }
+                        ${hasResource ? (isUnlocked ? 
+                            `<a href="${item.resource}" target="_blank" class="block w-full bg-emerald-500 text-white text-center py-3 rounded-xl font-bold text-xs shadow-md hover:bg-emerald-600 transition transform active:scale-95 uppercase"><i class="fas fa-folder-open mr-2"></i>TÀI LIỆU MỞ RỘNG</a>` : 
+                            `<button onclick="unlockLesson('${item.id}', '${item.pass}')" class="block w-full bg-gray-100 text-gray-400 text-center py-3 rounded-xl font-bold text-[10px] uppercase border border-gray-200">TÀI LIỆU ĐANG KHÓA</button>`)
+                        : ''}
                     </div>
                 </div>`;
             }).join('');
