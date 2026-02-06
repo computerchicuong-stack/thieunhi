@@ -40,7 +40,7 @@
 <body class="pb-32">
 
     <header class="bg-blue-900 text-white pt-10 pb-24 px-6 text-center">
-        <h1 class="text-3xl font-black uppercase tracking-tight">⛪ HỆ THỐNG BÀI HỌC THIẾU NHI 2026</h1>
+        <h1 class="text-3xl font-black uppercase tracking-tight">⛪ HỆ THỐNG TRIỂN KHAI BÀI HỌC THIẾU NHI NĂM 2026</h1>
         <p class="text-blue-300 mt-2 italic text-sm">Dữ liệu được đồng bộ trực tuyến từ Ban Thiếu Nhi</p>
     </header>
 
@@ -57,8 +57,15 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="lesson-container">
             <div class="col-span-full text-center py-10 text-gray-400">
-                <i class="fas fa-circle-notch fa-spin mr-2"></i> Đang kết nối dữ liệu...
+                <i class="fas fa-circle-notch fa-spin mr-2"></i> Đang tải kế hoạch bài học...
             </div>
+        </div>
+
+        <div class="mt-12 mb-8 text-center">
+            <a href="https://zalo.me/g/0908943468" target="_blank" class="inline-flex items-center gap-3 bg-blue-500 text-white px-8 py-4 rounded-2xl font-bold shadow-xl hover:bg-blue-600 transition transform active:scale-95">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" class="w-6 h-6" alt="Zalo">
+                THAM GIA NHÓM ZALO HỘI THÁNH
+            </a>
         </div>
     </main>
 
@@ -123,9 +130,9 @@
                                 purpose: cols[7], 
                                 summary: cols[8], 
                                 assigned: cols[9], 
-                                pass: cols[10],    
-                                link: cols[11],    
-                                resource: cols[12] 
+                                pass: cols[10], // Mật khẩu từ cột K
+                                link: cols[11], // Link từ cột L
+                                resource: cols[12] // Link từ cột M
                             });
                         }
                     }
@@ -139,7 +146,7 @@
         // Hàm mở link có bảo mật
         function openProtectedLink(link, correctPass) {
             if (!link || !link.toLowerCase().startsWith('http')) {
-                alert("Đường dẫn bài học chưa được cập nhật.");
+                alert("Đường dẫn chưa được cập nhật.");
                 return;
             }
 
@@ -148,11 +155,11 @@
                 return;
             }
 
-            const userPass = prompt("Bài học này được bảo mật. Vui lòng nhập mật khẩu để xem:");
+            const userPass = prompt("Nội dung này được bảo mật. Vui lòng nhập mật khẩu để xem:");
             if (userPass === correctPass) {
                 window.open(link, '_blank');
             } else if (userPass !== null) {
-                alert("Mật khẩu sai rồi! Vui lòng kiểm tra lại.");
+                alert("Mật khẩu không chính xác. Vui lòng thử lại!");
             }
         }
 
@@ -161,7 +168,7 @@
             const data = fullPlan[`m${m}`] || [];
             
             if (data.length === 0) {
-                container.innerHTML = `<div class="col-span-full text-center py-20 text-gray-400 italic bg-white rounded-3xl border-2 border-dashed mx-4">Tháng ${m} chưa có dữ liệu.</div>`;
+                container.innerHTML = `<div class="col-span-full text-center py-20 text-gray-400 italic bg-white rounded-3xl border-2 border-dashed mx-4">Tháng ${m} hiện chưa có kế hoạch bài học.</div>`;
                 return;
             }
 
@@ -169,6 +176,11 @@
                 const hasLink = item.link && item.link.toLowerCase().startsWith('http');
                 const hasResource = item.resource && item.resource.toLowerCase().startsWith('http');
                 const isLocked = item.pass && item.pass.trim() !== "";
+                const isEvent = item.event && item.event.toUpperCase() === 'Y';
+
+                const statusHTML = hasLink 
+                    ? `<span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200 uppercase animate-pulse">● Đã có bài học</span>` 
+                    : `<span class="text-[10px] font-bold text-orange-400 bg-orange-50 px-2 py-1 rounded-full border border-orange-100 uppercase">○ Đang soạn thảo</span>`;
 
                 return `
                 <div class="card-lesson p-6">
@@ -176,39 +188,48 @@
                         <div class="flex justify-between items-center mb-4">
                             <div class="flex items-center gap-2">
                                 <span class="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-1 rounded">TUẦN ${item.week}</span>
-                                ${isLocked ? `<button onclick="openProtectedLink('${item.link}', '${item.pass}')" class="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full border border-red-200 uppercase hover:bg-red-100 transition"><i class="fas fa-lock mr-1"></i> CÓ MẬT KHẨU</button>` : ''}
+                                ${item.day ? `<span class="text-[10px] font-bold bg-yellow-100 text-yellow-700 px-2 py-1 rounded uppercase">NGÀY ${item.day}</span>` : ''}
+                                ${isEvent ? `<i class="fas fa-star star-event text-lg ml-1"></i>` : ''}
+                                ${isLocked ? `<button onclick="openProtectedLink('${item.link}', '${item.pass}')" class="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-1 rounded-full border border-red-200 uppercase hover:bg-red-100 transition"><i class="fas fa-lock mr-1"></i> Có mật khẩu</button>` : ''}
                             </div>
-                            ${hasLink ? '<span class="text-[10px] text-green-500 font-bold uppercase">● CÔNG KHAI</span>' : '<span class="text-[10px] text-gray-300 font-bold uppercase">○ ĐANG SOẠN</span>'}
+                            ${statusHTML}
                         </div>
                         
                         <label>Chủ đề</label>
-                        <h3 class="font-bold text-blue-900 mb-2 text-lg leading-tight">${item.topic || '---'}</h3>
+                        <h3 class="font-bold text-blue-900 mb-2 text-lg leading-tight">${item.topic || 'Chủ đề trống'}</h3>
                         
                         <label>Kinh Thánh</label>
-                        <p class="text-sm text-gray-700 font-medium">${item.bible || '---'}</p>
+                        <p class="text-sm text-gray-700 font-medium">${item.bible || 'Đang cập nhật...'}</p>
                         
-                        <div class="bg-yellow-50 p-4 rounded-2xl my-3 border border-yellow-100">
+                        <div class="bg-yellow-50 p-4 rounded-2xl my-3 border border-yellow-100 relative">
+                            <i class="fas fa-quote-left absolute top-2 left-2 text-yellow-200 text-[10px]"></i>
                             <label class="text-yellow-600">Câu Gốc</label>
-                            <p class="text-sm italic text-gray-800 line-clamp-3">"${item.verse || '...'}"</p>
+                            <p class="text-sm italic text-gray-800 leading-relaxed">"${item.verse || 'Đang soạn câu gốc...'}"</p>
                         </div>
+                        
+                        <label>Mục đích</label>
+                        <p class="text-sm text-gray-600 line-clamp-3 mb-3 font-semibold">${item.purpose || 'Đang soạn mục đích...'}</p>
 
-                        <div class="flex items-center gap-2 mt-4 pt-4 border-t">
-                             <div class="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] text-white font-bold uppercase">${item.assigned ? item.assigned.charAt(0) : '?'}</div>
-                             <span class="text-xs font-bold text-gray-500">${item.assigned || 'Ban Thiếu Nhi'}</span>
+                        <label>Tóm tắt câu chuyện</label>
+                        <p class="text-sm text-gray-500 italic line-clamp-3 mb-4">${item.summary || 'Đang cập nhật tóm tắt nội dung...'}</p>
+
+                        <div class="flex items-center gap-2 mt-4 pt-4 border-t border-gray-50">
+                             <div class="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] text-white font-bold uppercase">${item.assigned ? item.assigned.charAt(0) : 'A'}</div>
+                             <span class="text-xs font-bold text-gray-500 uppercase">${item.assigned || 'Admin'}</span>
                         </div>
                     </div>
 
                     <div class="mt-6 flex flex-col gap-3">
                         ${hasLink 
                             ? `<button onclick="openProtectedLink('${item.link}', '${item.pass}')" class="block w-full ${isLocked ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-700 hover:bg-blue-800'} text-white text-center py-4 rounded-xl font-bold text-sm shadow-lg transition active:scale-95 uppercase">
-                                ${isLocked ? '<i class="fas fa-unlock-alt mr-2"></i>NHẬP MÃ MỞ BÀI' : 'XEM BÀI HỌC CHI TIẾT'}
+                                ${isLocked ? '<i class="fas fa-unlock-alt mr-2"></i>Nhập mã mở bài' : 'Xem bài học chi tiết'}
                                </button>` 
-                            : `<div class="w-full bg-gray-50 text-gray-300 text-center py-4 rounded-xl font-bold text-sm border-2 border-dashed uppercase">Chờ cập nhật link</div>`
+                            : `<div class="w-full bg-gray-50 text-gray-400 text-center py-4 rounded-xl font-bold text-sm border-2 border-dashed uppercase">Chờ cập nhật</div>`
                         }
                         
                         ${hasResource 
                             ? `<button onclick="openProtectedLink('${item.resource}', '${item.pass}')" class="block w-full bg-emerald-500 text-white text-center py-3 rounded-xl font-bold text-xs shadow-md hover:bg-emerald-600 transition active:scale-95 uppercase">
-                                <i class="fas fa-folder-open mr-2"></i>TÀI LIỆU MỞ RỘNG
+                                <i class="fas fa-folder-open mr-2"></i>Tài liệu mở rộng
                                </button>` 
                             : ''
                         }
